@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;1,400&family=Montserrat:wght@300;400&display=swap" rel="stylesheet"/>
+<title>Gallery — The Right Ring</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+*::-webkit-scrollbar{display:none;}
+body{background:#fff;font-family:'Montserrat',sans-serif;-webkit-font-smoothing:antialiased;scrollbar-width:none;}
+.hdr{text-align:center;padding:48px 20px 32px;border-bottom:1px solid #e8e8e8;margin-bottom:32px;}
+.hdr h1{font-family:'Cormorant Garamond',serif;font-size:38px;font-weight:400;font-style:italic;color:#1a1a1a;margin-bottom:12px;}
+.hdr p{font-size:12px;font-weight:300;color:#888;letter-spacing:0.12em;line-height:1.9;text-transform:uppercase;}
+.hdr-line{width:32px;height:1px;background:#1a1a1a;margin:18px auto 0;}
+#loading{text-align:center;padding:80px 20px;color:#aaa;font-size:10px;letter-spacing:0.25em;text-transform:uppercase;}
+.spin{width:26px;height:26px;border:1px solid #e0e0e0;border-top-color:#1a1a1a;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 16px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+#grid-wrap{display:none;width:100%;padding:0 24px;}
+#grid{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;max-width:900px;margin:0 auto;}
+@media(max-width:800px){#grid{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:500px){#grid{grid-template-columns:repeat(2,1fr);}}
+.tile{cursor:pointer;overflow:hidden;position:relative;background:#f5f5f5;aspect-ratio:1;}
+.tile img{width:100%;height:100%;object-fit:cover;display:block;transition:transform 0.5s,filter 0.3s;}
+.tile:hover img{transform:scale(1.06);filter:brightness(0.8);}
+.tile-overlay{position:absolute;inset:0;display:flex;align-items:flex-end;padding:14px;background:linear-gradient(to top,rgba(0,0,0,0.5),transparent 55%);opacity:0;transition:opacity 0.3s;}
+.tile:hover .tile-overlay{opacity:1;}
+.tile-cta{font-size:9px;letter-spacing:0.25em;text-transform:uppercase;color:#fff;border-bottom:1px solid rgba(255,255,255,0.5);padding-bottom:2px;}
+#modal{display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px;}
+#modal.open{display:flex;}
+.m-inner{background:#fff;display:grid;grid-template-columns:1fr 1fr;max-width:800px;width:100%;position:relative;animation:up 0.3s ease;max-height:90vh;overflow-y:auto;}
+@media(max-width:620px){.m-inner{grid-template-columns:1fr;}}
+@keyframes up{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:none;}}
+.m-img{background:#f5f5f5;min-height:360px;}
+.m-img img{width:100%;height:100%;object-fit:cover;display:block;}
+.m-form{padding:40px 36px;display:flex;flex-direction:column;justify-content:center;}
+.m-eyebrow{font-size:9px;letter-spacing:0.28em;text-transform:uppercase;color:#aaa;margin-bottom:10px;}
+.m-name{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:400;font-style:italic;color:#1a1a1a;margin-bottom:8px;}
+.m-sub{font-size:11px;font-weight:300;color:#999;line-height:1.8;margin-bottom:22px;}
+.m-line{width:24px;height:1px;background:#1a1a1a;margin-bottom:22px;}
+.m-ref{font-size:10px;color:#bbb;background:#fafafa;border:1px solid #ebebeb;padding:7px 10px;margin-bottom:18px;}
+.f-row{display:flex;gap:12px;}
+.f-row .f-field{flex:1;}
+.f-field{margin-bottom:14px;}
+.f-field label{display:block;font-size:9px;letter-spacing:0.2em;text-transform:uppercase;color:#aaa;margin-bottom:5px;}
+.f-field input,.f-field textarea{width:100%;background:transparent;border:none;border-bottom:1px solid #e0e0e0;padding:7px 0;font-family:'Montserrat',sans-serif;font-size:13px;font-weight:300;color:#1a1a1a;outline:none;transition:border-color 0.2s;}
+.f-field input:focus,.f-field textarea:focus{border-bottom-color:#1a1a1a;}
+.f-field textarea{resize:vertical;min-height:68px;}
+.f-btn{width:100%;margin-top:8px;background:#1a1a1a;color:#fff;border:none;padding:14px;font-family:'Montserrat',sans-serif;font-size:10px;letter-spacing:0.25em;text-transform:uppercase;cursor:pointer;transition:background 0.25s;}
+.f-btn:hover{background:#444;}
+.f-btn:disabled{background:#ddd;color:#aaa;cursor:not-allowed;}
+.f-thanks{display:none;text-align:center;padding:28px 0;}
+.f-thanks .star{font-size:22px;color:#1a1a1a;margin-bottom:12px;display:block;}
+.f-thanks h3{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:400;font-style:italic;margin-bottom:8px;}
+.f-thanks p{font-size:11px;color:#999;line-height:1.8;}
+.m-close{position:absolute;top:14px;right:14px;background:none;border:none;cursor:pointer;font-size:16px;color:#999;z-index:10;width:28px;height:28px;transition:color 0.2s;}
+.m-close:hover{color:#1a1a1a;}
+</style>
+</head>
+<body>
+<div class="hdr">
+  <h1>Our Collection</h1>
+  <p>Each piece crafted with meticulous care<br/>Interested in a design? We'd love to create something for you.</p>
+  <div class="hdr-line"></div>
+</div>
+<div id="loading"><div class="spin"></div>Loading Collection</div>
+<div id="grid-wrap"><div id="grid"></div></div>
+<div id="modal">
+  <div class="m-inner">
+    <button class="m-close" id="m-close">&#x2715;</button>
+    <div class="m-img"><img id="m-img" src="" alt=""/></div>
+    <div class="m-form">
+      <div class="m-eyebrow">Inquire About This Piece</div>
+      <div class="m-name" id="m-name">&#8212;</div>
+      <div class="m-sub">Tell us about yourself and we'll be in touch to discuss this design.</div>
+      <div class="m-line"></div>
+      <div class="m-ref" id="m-ref">Reference: &#8212;</div>
+      <form id="f-form">
+        <div class="f-row">
+          <div class="f-field"><label>First Name</label><input type="text" name="firstName" placeholder="Jane" required/></div>
+          <div class="f-field"><label>Last Name</label><input type="text" name="lastName" placeholder="Smith" required/></div>
+        </div>
+        <div class="f-field"><label>Email</label><input type="email" name="email" placeholder="jane@example.com" required/></div>
+        <div class="f-field"><label>Phone (optional)</label><input type="tel" name="phone" placeholder="+1 (555) 000-0000"/></div>
+        <div class="f-field"><label>Ring Size (if known)</label><input type="text" name="ringSize" placeholder="e.g. 6.5"/></div>
+        <div class="f-field"><label>Message</label><textarea name="message" placeholder="I'm interested in this design..."></textarea></div>
+        <input type="hidden" name="pieceId" id="f-id"/>
+        <input type="hidden" name="pieceName" id="f-name"/>
+        <button type="submit" class="f-btn" id="f-btn">Send Inquiry</button>
+      </form>
+      <div class="f-thanks" id="f-thanks">
+        <span class="star">&#10022;</span>
+        <h3>Thank You</h3>
+        <p>We've received your inquiry and will be in touch within 1-2 business days.</p>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var PROXY='https://rcd-gallery-proxy.vercel.app/api/gallery';
+var FORM='https://formspree.io/f/YOUR_FORM_ID';
+var items=[];
+function load(){
+  fetch(PROXY).then(function(r){return r.json();}).then(function(d){
+    if(!d.items||!d.items.length)throw new Error();
+    items=d.items;
+    render();
+  }).catch(function(){
+    document.getElementById('loading').textContent='Unable to load gallery. Please try again shortly.';
+  });
+}
+function render(){
+  var grid=document.getElementById('grid');
+  items.forEach(function(item,i){
+    var t=document.createElement('div');
+    t.className='tile';
+    var img=document.createElement('img');
+    img.src=item.image.thumbnail||item.image.url;
+    img.loading='lazy';
+    var ov=document.createElement('div');
+    ov.className='tile-overlay';
+    var sp=document.createElement('span');
+    sp.className='tile-cta';
+    sp.textContent='Inquire';
+    ov.appendChild(sp);
+    t.appendChild(img);
+    t.appendChild(ov);
+    t.onclick=function(){openModal(i);};
+    grid.appendChild(t);
+  });
+  document.getElementById('loading').style.display='none';
+  document.getElementById('grid-wrap').style.display='block';
+}
+function openModal(i){
+  var item=items[i];
+  document.getElementById('m-img').src=item.image.url;
+  document.getElementById('m-name').textContent=item.name;
+  document.getElementById('m-ref').textContent='Reference: '+item.name+' ('+item.id.slice(-6)+')';
+  document.getElementById('f-id').value=item.id;
+  document.getElementById('f-name').value=item.name;
+  document.getElementById('f-form').style.display='';
+  document.getElementById('f-btn').style.display='';
+  document.getElementById('f-thanks').style.display='none';
+  document.getElementById('f-form').reset();
+  document.getElementById('modal').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function closeModal(){
+  document.getElementById('modal').classList.remove('open');
+  document.body.style.overflow='';
+}
+document.getElementById('m-close').onclick=closeModal;
+document.getElementById('modal').onclick=function(e){if(e.target===document.getElementById('modal'))closeModal();};
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeModal();});
+document.getElementById('f-form').addEventListener('submit',function(e){
+  e.preventDefault();
+  var btn=document.getElementById('f-btn');
+  btn.disabled=true;btn.textContent='Sending...';
+  var data={};
+  new FormData(this).forEach(function(v,k){data[k]=v;});
+  fetch(FORM,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(data)})
+  .then(function(r){
+    if(r.ok){
+      document.getElementById('f-form').style.display='none';
+      document.getElementById('f-btn').style.display='none';
+      document.getElementById('f-thanks').style.display='block';
+    }else throw new Error();
+  }).catch(function(){
+    btn.disabled=false;btn.textContent='Send Inquiry';
+    alert('Something went wrong. Please email us directly.');
+  });
+});
+load();
+</script>
+</body>
+</html>
