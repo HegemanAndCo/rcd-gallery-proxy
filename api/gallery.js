@@ -1,49 +1,55 @@
-// Vercel Serverless Function — Airtable Product Catalog Gallery Proxy
-// Deploy to Vercel. Set AIRTABLE_API_KEY in Vercel Environment Variables.
-// v2 — returns name + all images per record for modal + inquiry form
+// Vercel Serverless Function — TRR Website Gallery Proxy
+// Caches results for 10 minutes to minimize Airtable API calls
+
+let cache = null;
+let cacheTime = 0;
+const CACHE_DURATION = 10 * 60 * 1000;
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const BASE_ID = 'appRZAg4zWZCgwihV';
   const TABLE   = 'CUSTOM DESIGNS';
   const API_KEY = process.env.AIRTABLE_API_KEY;
 
-  if (!API_KEY) {
-    return res.status(500).json({ error: 'AIRTABLE_API_KEY not set in environment variables' });
+  if (!API_KEY) return res.status(500).json({ error: 'AIRTABLE_API_KEY not set' });
+
+  const now = Date.now();
+  if (cache && (now - cacheTime) < CACHE_DURATION) {
+    res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate=1200');
+    return res.status(200).json(cache);
   }
 
   try {
-    let allRecords = [];
-    let offset     = null;
+    let allRecords = [], offset = null;
 
     do {
       const url = new URL(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE)}`);
       if (offset) url.searchParams.set('offset', offset);
-    url.searchParams.set('sort[0][field]', 'Auto Created');
-    url.searchParams.set('sort[0][direction]', 'desc');
+      url.searchParams.set('sort[0][field]', 'Auto Created');
+      url.searchParams.set('sort[0][direction]', 'desc');
+
       const response = await fetch(url.toString(), {
         headers: { Authorization: `Bearer ${API_KEY}` },
       });
 
       if (!response.ok) {
-        const err = await response.text();
-        return res.status(response.status).json({ error: err });
+        if (cache) return res.status(200).json(cache);
+        return res.status(response.status).json({ error: await response.text() });
       }
 
       const data = await response.json();
-      allRecords  = allRecords.concat(data.records);
-      offset      = data.offset || null;
+      allRecords = allRecords.concat(data.records);
+      offset = data.offset || null;
     } while (offset);
 
     const items = [];
 
     for (const record of allRecords) {
-      const fields    = record.fields;
+      const fields = record.fields;
       const allImages = [];
 
       for (const value of Object.values(fields)) {
@@ -51,10 +57,11 @@ export default async function handler(req, res) {
           for (const att of value) {
             if (att.type && att.type.startsWith('image/')) {
               allImages.push({
-                url:       att.url,
+                url: att.url,
                 thumbnail: att.thumbnails?.large?.url || att.thumbnails?.small?.url || att.url,
-                width:     att.width  || null,
-                height:    att.height || null,
+                width: att.width || null,
+                height: att.height || null,
+                filename: att.filename || '',
               });
             }
           }
@@ -67,23 +74,28 @@ export default async function handler(req, res) {
         fields['Name'] ||
         fields['Title'] ||
         fields['Product Name'] ||
-        fields['Item'] ||
-        fields['SKU'] ||
         `Piece #${record.id.slice(-6)}`;
 
+      const reference = allImages[0].filename
+        ? allImages[0].filename.replace(/\.[^/.]+$/, '')
+        : record.id.slice(-6);
+
       items.push({
-        id:        record.id,
-        name:      typeof name === 'string' ? name : String(name),
-        image:     allImages[0],
+        id: record.id,
+        name: typeof name === 'string' ? name : String(name),
+        reference,
+        image: allImages[0],
         allImages,
       });
     }
 
-    res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
-    return res.status(200).json({ items, total: items.length });
+    cache = { items, total: items.length };
+    cacheTime = now;
+    res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate=1200');
+    return res.status(200).json(cache);
 
   } catch (err) {
-    console.error('Gallery proxy error:', err);
+    if (cache) return res.status(200).json(cache);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
