@@ -24,6 +24,8 @@ export default async function handler(req, res) {
     do {
       const url = new URL(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE)}`);
       if (offset) url.searchParams.set('offset', offset);
+      url.searchParams.set('sort[0][field]', 'Date Created');
+      url.searchParams.set('sort[0][direction]', 'desc');
 
       const response = await fetch(url.toString(), {
         headers: { Authorization: `Bearer ${API_KEY}` },
