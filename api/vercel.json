@@ -4,5 +4,9 @@
     "api/gallery.js": {
       "runtime": "nodejs18.x"
     }
-  }
+  },
+  "routes": [
+    { "src": "/api/gallery", "dest": "/api/gallery" },
+    { "src": "/(.*)", "dest": "/public/index.html" }
+  ]
 }
