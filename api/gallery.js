@@ -18,7 +18,10 @@ function categorize(description, name) {
   const weddingKeywords = [
     'wedding band', 'wedding ring', 'band', 'eternity', 'anniversary',
     'stackable', 'milgrain', 'chevron', 'curved band', 'straight band',
-    'mens band', "men's band", 'his band', 'her band', 'matching band'
+    'mens band', "men's band", 'his band', 'her band', 'matching band',
+    'wrap band', 'wrap ring', 'coil', 'spiral', 'bypass',
+    'channel set', 'pave band', 'diamond band', 'baguette band',
+    'half eternity', 'full eternity', 'contoured', 'shadow band'
   ];
 
   for (const kw of engagementKeywords) {
@@ -97,6 +100,7 @@ export default async function handler(req, res) {
 
       const name = fields['Name'] || fields['Title'] || fields['Product Name'] || `Piece #${record.id.slice(-6)}`;
       const description = fields['Description'] || fields['description'] || '';
+      const customerName = fields['Name of Customer'] || '';
 
       const reference = allImages[0].filename
         ? allImages[0].filename.replace(/\.[^/.]+$/, '')
@@ -105,11 +109,12 @@ export default async function handler(req, res) {
       const category = fields['Category'] || categorize(description, typeof name === 'string' ? name : String(name));
 
       items.push({
-        id:        record.id,
-        name:      typeof name === 'string' ? name : String(name),
+        id:          record.id,
+        name:        typeof name === 'string' ? name : String(name),
         reference,
         category,
-        image:     allImages[0],
+        customerName: typeof customerName === 'string' ? customerName : String(customerName),
+        image:       allImages[0],
         allImages,
       });
     }
