@@ -1,9 +1,34 @@
-// Vercel Serverless Function — TRR Website Gallery Proxy
-// Caches results for 10 minutes to minimize Airtable API calls
+// Vercel Serverless Function — TRR Website Gallery Proxy v3
+// Auto-categorizes by description keywords
 
 let cache = null;
 let cacheTime = 0;
 const CACHE_DURATION = 10 * 60 * 1000;
+
+function categorize(description, name) {
+  const text = ((description || '') + ' ' + (name || '')).toLowerCase();
+  
+  const engagementKeywords = [
+    'engagement', 'center stone', 'center diamond', 'centre stone',
+    'solitaire', 'halo', 'proposal', 'bridal', 'promise ring',
+    'cushion', 'oval engagement', 'round brilliant', 'pear shaped',
+    'three stone', '3 stone', 'split shank', 'cathedral'
+  ];
+  
+  const weddingKeywords = [
+    'wedding band', 'wedding ring', 'band', 'eternity', 'anniversary',
+    'stackable', 'milgrain', 'chevron', 'curved band', 'straight band',
+    'mens band', "men's band", 'his band', 'her band', 'matching band'
+  ];
+
+  for (const kw of engagementKeywords) {
+    if (text.includes(kw)) return 'Engagement Ring';
+  }
+  for (const kw of weddingKeywords) {
+    if (text.includes(kw)) return 'Wedding Band';
+  }
+  return 'Other';
+}
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -49,7 +74,7 @@ export default async function handler(req, res) {
     const items = [];
 
     for (const record of allRecords) {
-      const fields = record.fields;
+      const fields    = record.fields;
       const allImages = [];
 
       for (const value of Object.values(fields)) {
@@ -57,11 +82,11 @@ export default async function handler(req, res) {
           for (const att of value) {
             if (att.type && att.type.startsWith('image/')) {
               allImages.push({
-                url: att.url,
+                url:       att.url,
                 thumbnail: att.thumbnails?.large?.url || att.thumbnails?.small?.url || att.url,
-                width: att.width || null,
-                height: att.height || null,
-                filename: att.filename || '',
+                width:     att.width  || null,
+                height:    att.height || null,
+                filename:  att.filename || '',
               });
             }
           }
@@ -70,21 +95,21 @@ export default async function handler(req, res) {
 
       if (allImages.length === 0) continue;
 
-      const name =
-        fields['Name'] ||
-        fields['Title'] ||
-        fields['Product Name'] ||
-        `Piece #${record.id.slice(-6)}`;
+      const name = fields['Name'] || fields['Title'] || fields['Product Name'] || `Piece #${record.id.slice(-6)}`;
+      const description = fields['Description'] || fields['description'] || '';
 
       const reference = allImages[0].filename
         ? allImages[0].filename.replace(/\.[^/.]+$/, '')
         : record.id.slice(-6);
 
+      const category = fields['Category'] || categorize(description, typeof name === 'string' ? name : String(name));
+
       items.push({
-        id: record.id,
-        name: typeof name === 'string' ? name : String(name),
+        id:        record.id,
+        name:      typeof name === 'string' ? name : String(name),
         reference,
-        image: allImages[0],
+        category,
+        image:     allImages[0],
         allImages,
       });
     }
@@ -95,6 +120,7 @@ export default async function handler(req, res) {
     return res.status(200).json(cache);
 
   } catch (err) {
+    console.error('Gallery proxy error:', err);
     if (cache) return res.status(200).json(cache);
     return res.status(500).json({ error: 'Internal server error' });
   }
